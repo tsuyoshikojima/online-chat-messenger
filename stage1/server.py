@@ -12,12 +12,18 @@ try:
         print("UDPサーバーを起動します")
         print(f"{SERVER_ADDRESS} : {SERVER_PORT}")
 
+        # 送信してきたクライアントのアドレスを集合として保存する
+        clients = set()
+
         while True:
             data, client_address = server_socket.recvfrom(BUFFER_SIZE)
 
+            clients.add(client_address)
+
             print(f"{client_address} から {len(data)}バイト受信しました")
 
-            server_socket.sendto(data, client_address)
+            for client in clients:
+                server_socket.sendto(data, client)
 
             print("クライアントに送り返しました")
 
