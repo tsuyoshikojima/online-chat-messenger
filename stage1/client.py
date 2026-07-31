@@ -1,5 +1,8 @@
 import socket
 
+from protocol import encode_message, decode_message
+
+
 SERVER_ADDRESS = ("127.0.0.1", 9001)
 
 BUFFER_SIZE = 4096
@@ -7,16 +10,31 @@ BUFFER_SIZE = 4096
 try:
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as client_socket:
 
+        print("チャットを開始します。")
+
         while True:
-            message = input("メッセージを入力してください\n> ")
+            username = input("ユーザー名を入力してください。\n> ").strip()
 
-            message_bytes = message.encode("utf-8")
+            if not username:
+                print("ユーザー名が入力されていません")
+                continue
 
-            client_socket.sendto(message_bytes, SERVER_ADDRESS)
+            break
 
-            data_bytes, server_address = client_socket.recvfrom(BUFFER_SIZE)
+        while True:
+            sending_message = input("メッセージを入力してください。\n> ")
 
-            print(f"サーバーからデータを受信しました: {data_bytes.decode('utf-8')}")
+            sending_bytes = encode_message(username, sending_message)
+            client_socket.sendto(sending_bytes, SERVER_ADDRESS)
+
+            received_bytes, _ = client_socket.recvfrom(BUFFER_SIZE)
+            received_username, received_message = decode_message(received_bytes)
+
+            print(
+                "メッセージを受信しました。\n"
+                f"ユーザー: {received_username}\n"
+                f"内容: {received_message}"  
+            )
 
 except KeyboardInterrupt:
-    print("\nチャットを終了します")
+    print("\nチャットを終了します。")
