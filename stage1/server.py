@@ -46,15 +46,22 @@ try:
 
                 clients[client_address] = time.monotonic()
 
-                print(f"{username} から {len(data_bytes)}バイトのデータを受信しました。")
+                print(
+                    f"{username} から"
+                    f"{len(data_bytes)}バイトのデータを受信しました。"
+                )
                 print(f"Message: {message}")
+
 
                 # データを送信してきたクライアント以外の全クライアントにメッセージを送信
                 sent_count = 0
                 for destination_address in clients:
                     if destination_address != client_address:
-                        server_socket.sendto(data_bytes, destination_address)
-                        sent_count += 1
+                        try:
+                            server_socket.sendto(data_bytes, destination_address)
+                            sent_count += 1
+                        except OSError as error:
+                            print(f"送信に失敗しました: {error}")
 
                 print(f"{sent_count}件のクライアントにメッセージを送信しました。")
             except socket.timeout:
