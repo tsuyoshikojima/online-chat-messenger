@@ -54,8 +54,21 @@ try:
         while True:
             sending_message = input("> ")
 
-            sending_bytes = encode_message(username, sending_message)
+            try:
+                sending_bytes = encode_message(username, sending_message)
+            except ValueError as error:
+                print(f"メッセージを送信出来ません: {error}")
+                continue
+
+            if len(sending_bytes) > BUFFER_SIZE:
+                print(
+                    "送信データが大きすぎます。"
+                    f"最大{BUFFER_SIZE}バイト、"
+                    f"現在{len(sending_bytes)}バイトです。"
+                )
+                continue
+
             client_socket.sendto(sending_bytes, SERVER_ADDRESS)
 
 except KeyboardInterrupt:
-    print("\nチャットを終了します。")
+    print("\nチャットを終了します。") 
