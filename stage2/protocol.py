@@ -2,7 +2,8 @@ from dataclasses import dataclass
 
 
 HEADER_SIZE = 32    # プロトコルの仕様でヘッダーは32バイト
-
+MAX_ROOM_NAME_SIZE = 255
+MAX_OPERATION_PAYLOAD_SIZE = 2 ** 29    # ヘッダーフィールドのサイズは29バイトで2 ** (8 * 29) - 1　バイトまで表現できるが仕様上2**29を最大値とする
 
 # headerが4つの値を持つためクラスとして管理する
 @dataclass  # __init__()などをPythonが自動生成
@@ -45,3 +46,30 @@ def encode_header(room_name_size: int, operation: int, state: int, operation_pay
 
     return room_name_size_bytes + operation_bytes + state_bytes + operation_payload_size_bytes
 
+
+def encode_body(room_name: str, operation_payload_bytes: bytes) -> bytes:
+    """TCPボディを組み立てる"""
+
+    if len(operation_payload_bytes) > MAX_OPERATION_PAYLOAD_SIZE:
+        raise ValueError("ペイロードのサイズが大きすぎます。")
+
+    room_name_bytes = room_name.encode("utf-8")
+
+    if not 1 <= len(room_name_bytes) <= MAX_ROOM_NAME_SIZE:
+        raise ValueError(f"ルーム名は1〜{MAX_ROOM_NAME_SIZE}バイトである必要があります。")
+
+    return room_name_bytes + operation_payload_bytes
+
+
+def decode_body(data: bytes, room_name_size: int, operation_payload_size: int) -> tuple[str, bytes]:
+    """バイトデータのボディをルーム名とペイロードに分割する"""
+
+    if len(data) != room_name_size + operation_payload_size:
+        raise ValueError("ボディサイズとヘッダーフィールドの値が一致しません。")
+
+    room_name_bytes = data[:room_name_size]
+    operation_payload_bytes = data[room_name_size:]
+
+    room_name = room_name_bytes.decode("utf-8")
+
+    return room_name, operation_payload_bytes
