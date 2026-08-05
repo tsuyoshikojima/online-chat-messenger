@@ -5,6 +5,7 @@ HEADER_SIZE = 32    # プロトコルの仕様でヘッダーは32バイト
 MAX_ROOM_NAME_SIZE = 255
 MAX_OPERATION_PAYLOAD_SIZE = 2 ** 29    # ヘッダーフィールドのサイズは29バイトで2 ** (8 * 29) - 1　バイトまで表現できるが仕様上2**29を最大値とする
 
+
 # headerが4つの値を持つためクラスとして管理する
 @dataclass  # __init__()などをPythonが自動生成
 class Header:
@@ -73,3 +74,26 @@ def decode_body(data: bytes, room_name_size: int, operation_payload_size: int) -
     room_name = room_name_bytes.decode("utf-8")
 
     return room_name, operation_payload_bytes
+
+
+def encode_packet(operation: int, state: int, room_name: str, operation_payload_bytes: bytes) -> bytes:
+    """TCPソケットで送信するためのパケットを組み立てる"""
+
+    room_name_bytes = room_name.encode("utf-8")
+    room_name_size = len(room_name_bytes)
+
+    operation_payload_size = len(operation_payload_bytes)
+
+    header_bytes = encode_header(
+        room_name_size=room_name_size,
+        operation=operation,
+        state=state,
+        operation_payload_size=operation_payload_size
+    )
+
+    body_bytes = encode_body(
+        room_name=room_name,
+        operation_payload_bytes=operation_payload_bytes
+    )
+
+    return header_bytes + body_bytes
