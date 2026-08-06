@@ -15,6 +15,22 @@ class Header:
     operation_payload_size: int
 
 
+def validate_header_fields(room_name_size: int, operation: int, state: int, operation_payload_size: int) -> None:
+    """ヘッダーフィールドの値が正しいか検証する"""
+
+    if not 1 <= room_name_size <= MAX_ROOM_NAME_SIZE:
+        raise ValueError(f"room_name_sizeは1〜{MAX_ROOM_NAME_SIZE}バイトである必要があります。")
+
+    if operation not in {1, 2}:
+        raise ValueError("operationは1か2のどちらかである必要があります。")
+
+    if state not in {0, 1, 2}:
+        raise ValueError("stateは0〜2である必要があります。")
+
+    if not 0 <= operation_payload_size <= MAX_OPERATION_PAYLOAD_SIZE:
+        raise ValueError(f"operation_payload_sizeは0〜{MAX_OPERATION_PAYLOAD_SIZE}バイトである必要があります。")
+
+
 def decode_header(data: bytes) -> Header:
     if len(data) != HEADER_SIZE:
         raise ValueError("ヘッダーのサイズが正しくありません")
@@ -24,21 +40,28 @@ def decode_header(data: bytes) -> Header:
     state = data[2]
     operation_payload_size = int.from_bytes(data[3:HEADER_SIZE], byteorder='big')
 
-    return Header(room_name_size, operation, state, operation_payload_size)
+    validate_header_fields(
+        room_name_size=room_name_size,
+        operation=operation,
+        state=state,
+        operation_payload_size=operation_payload_size
+    )
+
+    return Header(
+        room_name_size=room_name_size,
+        operation=operation,
+        state=state,
+        operation_payload_size=operation_payload_size
+    )
 
 
 def encode_header(room_name_size: int, operation: int, state: int, operation_payload_size: int) -> bytes:
-    if room_name_size > 255 or room_name_size <= 0:
-        raise ValueError("room_name_sizeは1〜255バイトである必要があります。")
-
-    if operation != 1 and operation != 2:
-        raise ValueError("operationは1か2である必要があります。")
-
-    if state != 0 and state != 1 and state != 2:
-        raise ValueError("stateは0〜2である必要があります。")
-
-    if operation_payload_size < 0 or operation_payload_size >= (2 ** 29):
-        raise ValueError(f"operation_payload_sizeは{2 ** 29 - 1}バイト以下である必要があります")
+    validate_header_fields(
+        room_name_size=room_name_size,
+        operation=operation,
+        state=state,
+        operation_payload_size=operation_payload_size
+    )
 
     room_name_size_bytes = room_name_size.to_bytes(1, byteorder='big')
     operation_bytes = operation.to_bytes(1, byteorder='big')

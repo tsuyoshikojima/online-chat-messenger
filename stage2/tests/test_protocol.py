@@ -71,3 +71,18 @@ def test_encode_packet() -> None:
     assert header.operation_payload_size == len(operation_payload_bytes)
     assert decoded_room_name == room_name
     assert decoded_payload_bytes == operation_payload_bytes
+
+
+def test_encode_packet_with_empty_payload() -> None:
+    packet = encode_packet(
+        operation=1,
+        state=0,
+        room_name="room1",
+        operation_payload_bytes=b"",
+    )
+
+    header = decode_header(packet[:HEADER_SIZE])
+
+    assert header.room_name_size == 5
+    assert header.operation_payload_size == 0
+    assert packet[HEADER_SIZE:] == b"room1"
