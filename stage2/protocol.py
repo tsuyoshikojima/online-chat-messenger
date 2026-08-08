@@ -10,8 +10,10 @@ MAX_OPERATION_PAYLOAD_SIZE = 2 ** 29    # ヘッダーフィールドのサイ�
 class StatusCode(IntEnum):
     SUCCESS = 0  # 成功時
     ROOM_ALREADY_EXISTS = 1  # 作成したいルームが既に存在するとき
-    INVALID_REQUEST = 2  # リクエストが不正な場合
-    INTERNAL_ERROR = 3  # サーバー側の不具合
+    ROOM_NOT_FOUND = 2  # 参加したいルームが存在しない場合 
+    INVALID_PASSWORD = 3  # パスワードが不正な場合
+    INVALID_REQUEST = 4  # リクエストが不正な場合
+    INTERNAL_ERROR = 5  # サーバー側の不具合
 
 
 # headerが4つの値を持つためクラスとして管理する
