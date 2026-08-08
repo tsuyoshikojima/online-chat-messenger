@@ -1,9 +1,17 @@
+from enum import IntEnum  # 整数として扱える列挙型
 from dataclasses import dataclass
 
 
 HEADER_SIZE = 32    # プロトコルの仕様でヘッダーは32バイト
 MAX_ROOM_NAME_SIZE = 255
 MAX_OPERATION_PAYLOAD_SIZE = 2 ** 29    # ヘッダーフィールドのサイズは29バイトで2 ** (8 * 29) - 1　バイトまで表現できるが仕様上2**29を最大値とする
+
+
+class StatusCode(IntEnum):
+    SUCCESS = 0  # 成功時
+    ROOM_ALREADY_EXISTS = 1  # 作成したいルームが既に存在するとき
+    INVALID_REQUEST = 2  # リクエストが不正な場合
+    INTERNAL_ERROR = 3  # サーバー側の不具合
 
 
 # headerが4つの値を持つためクラスとして管理する
