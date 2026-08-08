@@ -10,6 +10,16 @@ class RoomAlreadyExistsError(Exception):
     pass
 
 
+class RoomNotFoundError(Exception):
+    """参加したいルームが存在しない場合に投げる例外"""
+    pass
+
+
+class InvalidRoomPasswordError(Exception):
+    """パスワードが一致しない場合に投げる例外"""
+    pass
+
+
 class RoomManager:
     """ルームに関する情報と処理"""
 
@@ -46,3 +56,36 @@ class RoomManager:
         }
 
         return host_token  # クライアントにtokenを渡す必要があるため
+
+    def join_room(
+            self,
+            room_name: str,
+            user_name: str,
+            ip_address: str,
+            password: str | None
+    ) -> str:
+        
+        if not user_name.strip():
+            raise ValueError("ユーザー名がないです。")
+
+        if room_name not in self._rooms:
+            raise RoomNotFoundError("ルームが見つかりません。")
+
+        room = self._rooms[room_name]
+
+        # パスワードの確認
+        if room["password"] is not None and room["password"] != password:
+            raise InvalidRoomPasswordError("パスワードが一致しません。")
+
+        user_token = secrets.token_urlsafe(32)
+
+        room["members"][user_token] = {
+            "user_name" : user_name,
+            "ip_address" : ip_address,
+            "udp_address" : None
+        }
+
+        return user_token
+
+
+

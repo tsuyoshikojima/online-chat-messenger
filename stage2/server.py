@@ -15,7 +15,9 @@ from protocol import(
 
 from room_manager import (
     RoomManager,
-    RoomAlreadyExistsError
+    RoomAlreadyExistsError,
+    RoomNotFoundError,
+    InvalidRoomPasswordError
 )
 
 
@@ -38,14 +40,16 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:
             with connection:
                 header, room_name_bytes, operation_payload_bytes = recv_tcrp_message(connection=connection)
 
-                if header.operation != 1 or header.state != 0:  # ルーム作成時のヘッダー検証
-                    print("不正なルーム作成リクエストです")
+                if header.operation not in {1, 2} or header.state != 0:  # リクエストのヘッダー検証
+                    print("不正なリクエストです。リクエストを破棄します。")
                     continue
 
                 room_name = room_name_bytes.decode("utf-8")
 
+                # リクエストボディを解析・検証
                 try:
                     operation_payload = json.loads(operation_payload_bytes.decode("utf-8"))  # jsonをPythonの辞書に変換
+
                     user_name = operation_payload["user_name"]
                     password = operation_payload["password"]
 
@@ -65,19 +69,17 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:
                 ):
                     status_code = StatusCode.INVALID_REQUEST
                 
-                if status_code == StatusCode.SUCCESS:
+                if status_code == StatusCode.SUCCESS and header.operation == 1:
                     # ルーム作成
                     try:
-                        host_token = rooms.create_room(
+                        token = rooms.create_room(
                             room_name=room_name,
                             user_name=user_name,
                             ip_address=client_address[0],  # ポート番号はUDPで通信するときに変わってしまうため不要
                             password=password
                         )
 
-                        print(
-                            f"{room_name}の作成に成功しました。\n"
-                        )
+                        print(f"{user_name}が{room_name}を作成しました。")
 
                     except RoomAlreadyExistsError:
                         status_code = StatusCode.ROOM_ALREADY_EXISTS
@@ -85,8 +87,29 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:
                     except ValueError:
                         status_code = StatusCode.INVALID_REQUEST
 
+                elif status_code == StatusCode.SUCCESS and header.operation == 2:
+                    # ルーム参加
+                    try:
+                        token = rooms.join_room(
+                            room_name=room_name,
+                            user_name=user_name,
+                            ip_address=client_address[0],
+                            password=password
+                        )
+
+                        print(f"{user_name}が{room_name}に参加しました。")
+
+                    except RoomNotFoundError:
+                        status_code = StatusCode.ROOM_NOT_FOUND
+
+                    except InvalidRoomPasswordError:
+                        status_code = StatusCode.INVALID_PASSWORD
+
+                    except ValueError:
+                        status_code = StatusCode.INVALID_REQUEST
+
                 response_packet = encode_packet(
-                    operation=1,
+                    operation=header.operation,
                     state=1,
                     room_name=room_name,
                     operation_payload_bytes=status_code.to_bytes(
@@ -95,17 +118,18 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:
                     )
                 )
 
-                connection.sendall(response_packet)     # ペイロードにステータスコードを載せてクライアントに送信
+                connection.sendall(response_packet)     # ステータスコードの送信
 
+                # トークンの送信
                 if status_code == StatusCode.SUCCESS:
                     final_packet = encode_packet(
-                        operation=1,
+                        operation=header.operation,
                         state=2,
                         room_name=room_name,
-                        operation_payload_bytes=host_token.encode("utf-8")
+                        operation_payload_bytes=token.encode("utf-8")
                     )
 
-                    connection.sendall(final_packet)        # トークンを送信
+                    connection.sendall(final_packet)        
 
         except ConnectionError as error:
             print(f"クライアントとの接続が切断されました。: {error}")

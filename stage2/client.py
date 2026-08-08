@@ -23,20 +23,31 @@ while True:
             "> "
         ))
 
-        if operation == 1:    # 一旦ルーム作成のみを実装
+        if operation in {1, 2}:   
             break
+
     except ValueError:
         print("入力値が間違っています。")
         continue
 
-while True:
-    room_name = input(
-        "作成もしくは参加するルーム名を入力してください。\n"
-        "> "
-        ).strip()
+if operation == 1:
+    while True:
+        room_name = input(
+            "作成もしくは参加するルーム名を入力してください。\n"
+            "> "
+            ).strip()
 
-    if room_name:
-        break
+        if room_name:
+            break
+else:
+     while True:
+        room_name = input(
+            "参加するルーム名を入力してください。\n"
+            "> "
+            ).strip()
+
+        if room_name:
+            break
 
 while True:
     user_name = input(
@@ -47,11 +58,17 @@ while True:
     if user_name:
         break
 
-password = input(
-    "パスワードを作成する場合は、パスワードを入力してください。\n"
-    "不要な場合は、そのままEnterを押してください。\n"
-    "> "
-).strip()
+if operation == 1:
+    password = input(
+        "パスワードを作成する場合は、パスワードを入力してください。\n"
+        "不要な場合は、そのままEnterを押してください。\n"
+        "> "
+    ).strip()
+else:
+    password = input(
+        "ルームのパスワードを入力してください。パスワードが不要なルームはそのままEnterを押してください。\n"
+        "> "
+    ).strip()
 
 
 try:
@@ -75,9 +92,10 @@ try:
         client_socket.sendall(request_packet)
 
         header, room_name_bytes, payload_bytes = recv_tcrp_message(client_socket)   # サーバーからの応答
+
         response_room_name = room_name_bytes.decode("utf-8")
 
-        if header.operation != operation or header.state != 1 or response_room_name != room_name:      # レスポンスヘッダーの検証
+        if header.operation != operation or header.state != 1 or response_room_name != room_name:      # レスポンス内容の検証
             raise ValueError("不正なレスポンスです")
 
         if len(payload_bytes) != 1:
@@ -88,19 +106,35 @@ try:
         if status_code == StatusCode.SUCCESS:
             header, room_name_bytes, token_bytes = recv_tcrp_message(client_socket)     # サーバーからの応答
             response_room_name = room_name_bytes.decode("utf-8")
-            host_token = token_bytes.decode("utf-8")
+            token = token_bytes.decode("utf-8")
 
             if header.operation != operation or header.state != 2 or room_name != response_room_name:      # レスポンスヘッダーの検証
                 raise ValueError("不正なレスポンスです")
 
-            print(f"{room_name}を作成しました。")
-            print(f"あなたのトークンは{host_token}です。")
+            if operation == 1:
+                print(f"{room_name}を作成しました。")
+            elif operation == 2:
+                print(f"{room_name}に参加しました。")
+
+            print(f"あなたのトークンは{token}です。")
 
         elif status_code == StatusCode.ROOM_ALREADY_EXISTS:
             print("ルームが既に存在します。")
+
+        elif status_code == StatusCode.INVALID_PASSWORD:
+            print("パスワードが異なります。")
+
+        elif status_code == StatusCode.ROOM_NOT_FOUND:
+            print("ルームが見つかりません。")
+
+        elif status_code == StatusCode.INVALID_REQUEST:
+            print("不正なリクエストです。")
 
 except ConnectionError as error:
     print(f"サーバーとの接続が切れました。: {error}")
 
 except KeyboardInterrupt:
     print("\nチャットを終了します。")
+
+except ValueError as error:
+    print(f"サーバーから不正なレスポンスを受信しました。: {error}")
